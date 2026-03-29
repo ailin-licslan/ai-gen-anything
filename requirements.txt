@@ -1,0 +1,12 @@
+fastapi>=0.100.0
+uvicorn>=0.23.2
+pydub>=0.25.1
+requests>=2.31.0
+deep-translator>=1.11.4
+edge-tts>=6.1.9
+python-docx>=0.8.11
+pandas>=2.0.0
+openpyxl>=3.1.0
+xlrd>=2.0.1
+python-multipart>=0.0.6
+starlette>=0.27.0

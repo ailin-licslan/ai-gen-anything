@@ -1,0 +1,52 @@
+
+---
+
+# 3. .gitignore（Git 忽略文件，非常完整）
+```gitignore
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 中间产物
+temp_*
+*.mp3
+*.wav
+*.m4a
+*.ass
+*.mp4
+*.jpg
+*.jpeg
+*.png
+*.webp
+scene_images/
+
+# 输出
+final_video.mp4
+full_audio.mp3
+subtitle*.ass
+dialogue*.txt
+
+# 系统
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 密钥
+.env
+config.json
