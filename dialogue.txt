@@ -1,11 +1,13 @@
-jack: Hey—you must be Liam’s cousin rose, right? From Los Angeles?
-rose: That’s me! I flew in late last night, actually.
-jack: I’m jack, Liam’s college buddy from State. Nice to meet you. And I can promise I’m not half as chaotic as Liam probably made me sound.
-rose: Good to meet you too—and yeah, I’ve definitely heard a thing or two about you! Soccer star and total party lover, that’s what he said.
-jack: Soccer’s my main thing, for sure—and I won’t lie, I do love a good party. But enough about me—tell me what you get up to back in LA.
-rose: Oh, I’m way more of a skateboarder than a soccer player. LA has some amazing spots for skating, and we usually hang out at beachside spots after, grab food and chill with friends.
-jack: That sounds so cool. How long are you in town for?
-rose: I’m staying for two weeks total. Liam said he’s got a packed plan lined up—some sightseeing, hanging with his friends, checking out the local bars and spots, and maybe a quick hiking trip in the nearby hills for a day or two.
-jack: Liam’s the best for this—he knows every corner of this town, and everyone here. He’ll definitely make sure you have a great time, and all his friends are happy to show you around too.
-rose: Thanks a lot, I really appreciate that. I’m still a little jet-lagged right now, but I’ll be fully rested by tomorrow. I’m super curious to see what Liam has planned for me.
-jack: Don’t even stress about it—we’ve all got you covered. And don’t be shocked if we crash your place in LA one day, ready to hit those skate spots with you!
+LAUREN: Hi—you must be Sarah. I can tell from your picture. I’m Lauren. Finally we meet! So we’re going to be roomies this semester!
+SARAH: Yes, I recognize you from your photo, too! I’m so glad to meet you in person—and I see from your T-shirt that you like baseball. I’m a big fan, too!
+LAUREN: Well, the T-shirt was a going-away present from my brother, who’s a baseball player. Look on the back—it has a photo of all the players on his team. They actually won the city championship this summer.
+SARAH: That’s awesome. I tell you, I’m not very athletic, but I love to watch baseball, even if it’s a Little League game. You could say I’m a professional spectator. What about you, do you play a sport?
+LAUREN: Yes, I play tennis. As a matter of fact, I have a scholarship, and I’m going to play for the university. Now tell me, what else do you like to do?
+SARAH: Well—what I like to do best is dance. I’m studying classical ballet, but I also like to dance to popular music.
+LAUREN: Cool. We have a lot in common. I like to dance, too. Think you’ll be up for checking out the local clubs this weekend?
+SARAH: Oh, yeah. And the restaurants, too. Speaking of which—are you hungry? I’d love to grab a bite before it gets too late. I’m starving!
+LAUREN: Are you kidding me? I’m always up for going out! How about trying the place up the street? I’m kind of hungry for a good hamburger.
+SARAH: Lauren, what do you think of our room?
+LAUREN: To be honest with you, I really can’t stand that dark color on the walls. It’s, like, really depressing. I prefer light colors. Plus, I’d like to change the rug and the bedspreads. Do you like them?
+SARAH: No, I agree with you. They’re horrible. With a couple of coats of paint and a few small changes, we’ll make this room comfortable and cozy. Everybody will want to hang out here.
+LAUREN: Man, I’m so relieved! I think we’re really going to get along. I’m going to call my mom right now and tell her how cool my new roomie is.

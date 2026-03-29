@@ -40,7 +40,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # ------------------------------------------------------------------------------
 # LLM 改写
 # ------------------------------------------------------------------------------
-def llm_rewrite_text(original_text: str) -> str:
+def llm_rewrite_text2(original_text: str) -> str:
     start_time = time.time()
     print("\n[LLM] 开始调用大模型文本改写...")
 
@@ -87,11 +87,343 @@ def llm_rewrite_text(original_text: str) -> str:
         return rewritten
 
     except Exception as e:
-        print(f"[LLM] 改写失败：{e}")
+        print(f"[LLM] 改写失败：{e}, 返回原始内容~")
         return original_text
 
 
 # ------------------------------------------------------------------------------
+# LLM 改写 【修复：只改写、不翻译，保持原语言】
+# ------------------------------------------------------------------------------
+def llm_rewrite_text3(original_text: str) -> str:
+    start_time = time.time()
+    print("\n[LLM] 开始调用大模型文本改写...")
+
+    if not OPENROUTER_API_KEY:
+        print("[LLM] 未配置 API Key，直接返回原文")
+        return original_text
+
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    # 🔥 超级强化：强制要求 只改写、不翻译、保持原语言
+    prompt = f"""
+You are a text optimizer. Please follow these rules strictly:
+1. ONLY PARAPHRASE the text, DO NOT translate.
+2. Keep the original meaning.
+3. Keep the original language (English remains English, Chinese remains Chinese).
+4. Make the expression smoother, more natural, more fluent.
+5. Split into complete sentences, one per line.
+6. Output MUST be valid JSON only, no extra text.
+7. JSON format: {{"content": ["sentence 1", "sentence 2", "sentence 3"]}}
+
+Text to paraphrase:
+{original_text}
+""".strip()
+
+    data = {
+        "model": MODEL_NAME,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.6,
+        "max_tokens": 2048
+    }
+
+    try:
+        resp = requests.post(OPENROUTER_URL, headers=headers, json=data, timeout=60)
+        resp.raise_for_status()
+        result = resp.json()
+        content = result["choices"][0]["message"]["content"].strip()
+
+        # 安全提取 JSON
+        json_start = content.find('{')
+        json_end = content.rfind('}') + 1
+        json_str = content[json_start:json_end]
+
+        data = json.loads(json_str)
+        lines = data.get("content", [])
+        rewritten = "\n".join([line.strip() for line in lines if line.strip()])
+
+        cost = round(time.time() - start_time, 2)
+        print(f"[LLM] ✅ 改写完成，耗时：{cost}s")
+        return rewritten
+
+    except Exception as e:
+        print(f"[LLM] 改写失败：{e}, 返回原始内容~")
+        return original_text
+
+
+# ------------------------------------------------------------------------------
+# LLM 改写 【修复：兼容 content=None 场景，强制输出到 content】
+# ------------------------------------------------------------------------------
+def llm_rewrite_text4(original_text: str) -> str:
+    start_time = time.time()
+    print("\n[LLM] 开始调用大模型文本改写...")
+
+    if not OPENROUTER_API_KEY:
+        print("[LLM] 未配置 API Key，直接返回原文")
+        return original_text
+
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    # 🔥 强化 Prompt：强制模型把改写结果输出到 content，不要放在 reasoning 里
+    prompt = f"""
+You are a text optimizer. Follow these rules STRICTLY:
+1. ONLY PARAPHRASE the text, DO NOT translate. Keep the original language (English→English, Chinese→Chinese).
+2. Keep the original meaning, make expression smoother and natural.
+3. Split into complete sentences, one per line.
+4. YOUR OUTPUT MUST BE ONLY VALID JSON, NO extra text, NO reasoning, NO explanations.
+5. JSON format: {{"content": ["sentence 1", "sentence 2", ...]}}
+
+Text to paraphrase:
+{original_text}
+""".strip()
+
+    data = {
+        "model": MODEL_NAME,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.3,  # 降低温度，让输出更稳定、更遵守格式
+        "max_tokens": 2048
+    }
+
+    try:
+        resp = requests.post(OPENROUTER_URL, headers=headers, json=data, timeout=60)
+        resp.raise_for_status()
+        result = resp.json()
+
+        # 🔥 安全读取 content：优先 content，为空则尝试读取 reasoning
+        message = result["choices"][0]["message"]
+        content = message.get("content")
+        if content is None:
+            content = message.get("reasoning", "")
+        if not content:
+            raise ValueError("模型未返回任何有效内容")
+
+        content = content.strip()
+
+        # 安全提取 JSON
+        json_start = content.find('{')
+        json_end = content.rfind('}') + 1
+        if json_start == -1 or json_end == 0:
+            raise ValueError("未找到有效的 JSON 格式内容")
+        json_str = content[json_start:json_end]
+
+        data = json.loads(json_str)
+        lines = data.get("content", [])
+        rewritten = "\n".join([line.strip() for line in lines if line.strip()])
+
+        cost = round(time.time() - start_time, 2)
+        print(f"[LLM] ✅ 改写完成，耗时：{cost}s")
+        return rewritten
+
+    except Exception as e:
+        print(f"[LLM] 改写失败：{e}, 返回原始内容~")
+        return original_text
+
+
+def llm_rewrite_text5(original_text: str) -> str:
+    start_time = time.time()
+    print("\n[LLM] 开始调用大模型文本改写...")
+
+    if not OPENROUTER_API_KEY:
+        print("[LLM] 未配置 API Key，直接返回原文")
+        return original_text.strip()
+
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    # 极简高压指令：禁止推理、禁止解释、只原样语言改写、只输出JSON
+    prompt = """Strict rules:
+1. Only paraphrase, NEVER translate. Same language only.
+2. Keep original meaning, smooth natural dialogue.
+3. Output ONLY pure JSON, no explanation, no reasoning, no extra words.
+4. Format exactly: {"content":["sent1","sent2"]}
+
+Text:
+""" + original_text
+
+    data = {
+        "model": MODEL_NAME,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.2,
+        "max_tokens": 4096,  # 扩容防截断
+        "stop": ["\n\nReason", "explanation:"]
+    }
+
+    try:
+        resp = requests.post(OPENROUTER_URL, headers=headers, json=data, timeout=90)
+        resp.raise_for_status()
+        result = resp.json()
+
+        msg = result["choices"][0]["message"]
+        # 丢弃reasoning垃圾，只拿正规content
+        raw = msg.get("content")
+        if not raw:
+            print("[LLM 警告] content为空，模型截断/跑偏，直接返回原文")
+            return original_text
+
+        raw = raw.strip()
+        # 安全截取JSON
+        s_idx = raw.find("{")
+        e_idx = raw.rfind("}")
+        if s_idx == -1 or e_idx == -1:
+            raise ValueError("无合法JSON边界")
+
+        json_str = raw[s_idx:e_idx + 1]
+        arr = json.loads(json_str).get("content", [])
+        ok_txt = "\n".join([x.strip() for x in arr if x.strip()])
+
+        cost = round(time.time() - start_time, 2)
+        print(f"[LLM] ✅ 改写成功 耗时:{cost}s")
+        return ok_txt
+
+    except Exception as e:
+        print(f"[LLM] 改写异常/截断/格式错误:{str(e)}，兜底返回原文")
+        return original_text
+
+
+def llm_rewrite_text6(original_text: str) -> str:
+    start_time = time.time()
+    print("\n[LLM] 开始调用大模型文本改写...")
+
+    if not OPENROUTER_API_KEY:
+        print("[LLM] 未配置 API Key，直接返回原文")
+        return original_text.strip()
+
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    # 极简指令：强制模型把结果塞进 content，禁止任何思考
+    prompt = """
+RULES:
+1. ONLY PARAPHRASE, NO TRANSLATION. Keep original language.
+2. Output ONLY JSON, NO reasoning, NO explanation, NO extra text.
+3. Format: {"content":["sent1","sent2",...]}
+
+Text:
+""" + original_text
+
+    data = {
+        "model": MODEL_NAME,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.1,  # 极度保守，减少发散
+        "max_tokens": 4096,
+        "stream": False
+    }
+
+    try:
+        resp = requests.post(OPENROUTER_URL, headers=headers, json=data, timeout=120)
+        resp.raise_for_status()
+        res = resp.json()
+
+        msg = res["choices"][0]["message"]
+        raw = msg.get("content")
+
+        # 兜底：如果 content 为空，尝试从 reasoning 里捞 JSON（最后手段）
+        if not raw:
+            print("[LLM 警告] content 为空，尝试从 reasoning 提取 JSON...")
+            reasoning = msg.get("reasoning", "")
+            # 从 reasoning 里找 {...}
+            s = reasoning.find("{")
+            e = reasoning.rfind("}")
+            if s != -1 and e != -1:
+                raw = reasoning[s:e + 1]
+            else:
+                print("[LLM 严重警告] 无法提取任何 JSON，直接返回原文")
+                return original_text
+
+        # 清洗并解析 JSON
+        raw = raw.strip()
+        s_idx = raw.find("{")
+        e_idx = raw.rfind("}")
+        if s_idx == -1 or e_idx == -1:
+            raise ValueError("未找到合法 JSON 边界")
+
+        json_str = raw[s_idx:e_idx + 1]
+        arr = json.loads(json_str).get("content", [])
+        final = "\n".join([x.strip() for x in arr if x.strip()])
+
+        cost = round(time.time() - start_time, 2)
+        print(f"[LLM] ✅ 改写成功，耗时: {cost}s")
+        return final
+
+    except Exception as e:
+        print(f"[LLM] 改写失败: {e}，返回原文")
+        return original_text
+
+    # ------------------------------------------------------------------------------
+
+
+def llm_rewrite_text(original_text: str) -> str:
+    start_time = time.time()
+    print("\n[LLM] 开始英文纯改写(不许翻译)...")
+    raw_txt = original_text.strip()
+    if not raw_txt:
+        return original_text
+
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    # 极致高压指令，杜绝废话
+    prompt = """Hard Rules:
+1. Only paraphrase English, DO NOT translate. Keep English only.
+2. Output ONLY clean JSON: {"content":["line1","line2"...]}
+3. No thinking, no explanation, no extra words outside JSON.
+
+Text:
+""" + raw_txt
+
+    payload = {
+        "model": MODEL_NAME,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.05,
+        "max_tokens": 8092,  # 扩容防截断
+        "stop": ["\n\nReason", "explanation:"],
+        "timeout": 120
+    }
+
+    try:
+        resp = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=120)
+        resp.raise_for_status()
+        res_json = resp.json()
+        msg = res_json["choices"][0]["message"]
+
+        # 1.优先拿content
+        out = msg.get("content", "")
+        # 2.content空 → 强制从reasoning捞
+        if not out:
+            print("[警告] content为空，立刻抓取reasoning中的JSON...")
+            out = msg.get("reasoning", "")
+
+        # 精准抠 { ... }
+        left = out.find("{")
+        right = out.rfind("}")
+        if left == -1 or right == -1:
+            raise Exception("全文找不到合法JSON包围符")
+
+        pure_json = out[left:right + 1]
+        data = json.loads(pure_json)
+        arr = data.get("content", [])
+        final_str = "\n".join([x.strip() for x in arr if x.strip()])
+
+        print(f"[成功] 改写完成，耗时{round(time.time() - start_time, 2)}s")
+        return final_str
+
+    except Exception as e:
+        print(f"[改写异常精准日志]: {str(e)}")
+        # 最坏兜底：返回原文不崩流程
+        return original_text
+
+
 # ASR
 # ------------------------------------------------------------------------------
 def call_alibaba_asr(audio_file_path: str) -> str:
@@ -138,9 +470,19 @@ def call_alibaba_asr(audio_file_path: str) -> str:
 
 
 def translate_text(text):
+    # 空内容直接返回
+    if not text or not text.strip():
+        return ""
+
     try:
-        return GoogleTranslator(source='en', target='zh-CN').translate(text.strip())
-    except:
+        # 强制清理空白 + 严格英译中
+        clean_text = text.strip()
+        translated = GoogleTranslator(source='en', target='zh-CN').translate(clean_text)
+        print(f"【翻译成功】英文: {clean_text}")
+        print(f"【翻译成功】中文: {translated}")
+        return translated
+    except Exception as e:
+        print(f"【翻译失败】: {e} → 返回英文原文")
         return text
 
 
@@ -267,8 +609,10 @@ Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour,
 
         with open("subtitle_en.ass", "w", encoding="utf-8") as f_en, \
                 open("subtitle_cn.ass", "w", encoding="utf-8") as f_cn:
-            f_en.write(ass_header + style_en + "\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
-            f_cn.write(ass_header + style_cn + "\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
+            f_en.write(
+                ass_header + style_en + "\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
+            f_cn.write(
+                ass_header + style_cn + "\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
 
             cur = 0.0
             for item in audio_files:
@@ -314,7 +658,7 @@ Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour,
             f"[v_zoom]ass={cn_sub}[v_sub_cn]",
             f"[v_sub_cn]ass={en_sub}[v_final]",
             f"[{len(scene_files)}:a]volume=1.0[voice]",
-            f"[{len(scene_files)+1}:a]volume=0.18[bgm]",
+            f"[{len(scene_files) + 1}:a]volume=0.18[bgm]",
             "[voice][bgm]amix=inputs=2:duration=first[a_final]"
         ]
 
@@ -404,9 +748,9 @@ async def generate_from_upload(file: UploadFile = File(...)):
     try:
         with open(temp, "wb") as f:
             f.write(await file.read())
-
+        # TODO 根据传进来的总体内容去--> LLM -->生产不同的场景 --> 去调用生图模型得到图片 + 后面融合TTS --> 生产视频
         text = await process_file_to_dialogue(file, temp)
-        dialogue_path = "dialogue_upload_file.txt"
+        dialogue_path = "dialogue_upload_file_updated.txt"
 
         with open(dialogue_path, "w", encoding="utf-8") as f:
             f.write(text)
@@ -451,4 +795,5 @@ async def index():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
