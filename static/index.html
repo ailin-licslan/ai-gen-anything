@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Video Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #e8f5e8;
+            --secondary-color: #764ba2;
+            --text-dark: #2d2d2d;
+            --text-gray: #555;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+        }
+
+        .container {
+            max-width: 700px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            padding: 50px 40px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 1;
+        }
+
+        .lang-switch {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 4px;
+            background: rgba(255,255,255,0.9);
+            padding: 4px 8px;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .lang-btn {
+            background: transparent;
+            border: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            color: #777;
+            padding: 4px 8px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        .lang-btn.active {
+            color: white;
+            background: var(--secondary-color);
+            font-weight: 600;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            color: white;
+            font-size: 1.2rem;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255,255,255,0.2);
+            border-top: 5px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .header {
+            margin-bottom: 40px;
+        }
+
+        .title {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            letter-spacing: 1px;
+            flex-wrap: wrap;
+            min-height: 80px;
+        }
+
+        .ai-part {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .typewriter-wrap {
+            position: relative;
+            display: inline-block;
+            min-height: 60px;
+            line-height: 1.2;
+            vertical-align: middle;
+        }
+
+        .typewriter-text {
+            display: inline-block;
+            overflow: hidden;
+            white-space: nowrap;
+            border-right: 3px solid var(--secondary-color);
+        }
+
+        .subtitle {
+            font-size: 1.15rem;
+            color: var(--text-gray);
+            line-height: 1.6;
+            max-width: 500px;
+            margin: 0 auto;
+            min-height: 2.4em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #f0f0f0;
+            margin-bottom: 35px;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .tab-button {
+            padding: 14px 22px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+            background: transparent;
+            color: #777;
+            position: relative;
+            border-radius: 8px 8px 0 0;
+            min-width: 140px;
+        }
+
+        .tab-button.active {
+            color: var(--secondary-color);
+            font-weight: 600;
+            background: #f8f5ff;
+        }
+
+        .tab-button.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: var(--secondary-color);
+        }
+
+        .tab-wrapper {
+            position: relative;
+            min-height: 320px;
+        }
+
+        .tab-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            display: none;
+            padding: 10px 0;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        .upload-section {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            align-items: center;
+            min-height: 280px;
+            justify-content: center;
+        }
+
+        .upload-area {
+            width: 100%;
+            padding: 35px 20px;
+            border: 2px dashed #ddd;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: #fafbfc;
+            min-height: 160px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .upload-area:hover {
+            border-color: var(--secondary-color);
+            background-color: #f8f5ff;
+            transform: translateY(-2px);
+        }
+
+        .upload-area input[type="file"] {
+            display: none;
+        }
+
+        .upload-area p {
+            margin-bottom: 18px;
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .upload-area label {
+            display: inline-block;
+            padding: 12px 26px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .upload-area label:hover {
+            transform: scale(1.03);
+            box-shadow: 0 4px 12px rgba(118,75,162,0.2);
+        }
+
+        /* 🔥 文件名回显样式 */
+        .file-name {
+            margin-top: 12px;
+            font-size: 0.95rem;
+            color: #28a745;
+            font-weight: 500;
+            max-width: 90%;
+            word-break: break-all;
+            display: none; /* 默认隐藏 */
+        }
+
+        .record-btn {
+            padding: 18px 40px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            background: #ff4757;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .record-btn.recording {
+            background: #e53935;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .btn {
+            padding: 14px 32px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(118,75,162,0.25);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 30px 20px;
+            }
+            .title {
+                font-size: 2rem;
+                gap: 8px;
+                min-height: 60px;
+            }
+            .typewriter-wrap {
+                min-height: 40px;
+            }
+            .subtitle {
+                font-size: 1rem;
+                min-height: 2.8em;
+            }
+            .tab-button {
+                padding: 10px 12px;
+                font-size: 0.9rem;
+                min-width: 100px;
+            }
+            .upload-section {
+                min-height: 260px;
+            }
+            .lang-switch {
+                top: 15px;
+                right: 15px;
+                padding: 3px 6px;
+            }
+            .lang-btn {
+                font-size: 0.8rem;
+                padding: 3px 6px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .title {
+                font-size: 1.8rem;
+            }
+            .tab-button {
+                padding: 8px 8px;
+                font-size: 0.85rem;
+                min-width: 90px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div>视频生成中，请稍候...</div>
+</div>
+
+<div class="container">
+    <div class="lang-switch">
+        <button class="lang-btn active" data-lang="zh">中</button>
+        <button class="lang-btn" data-lang="en">EN</button>
+    </div>
+
+    <div class="header">
+        <h1 class="title">
+            <span class="ai-part">AI</span>
+            <div class="typewriter-wrap">
+                <span class="typewriter-text" id="dynamicText"></span>
+            </div>
+        </h1>
+        <p class="subtitle" data-i18n="subtitle">选择您的音频来源，一键生成专业级双语视频 (中英)</p>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-button active" data-tab="default" data-i18n="tab_default">默认生成</button>
+        <button class="tab-button" data-tab="upload" data-i18n="tab_upload">上传文件生成</button>
+        <button class="tab-button" data-tab="record" data-i18n="tab_record">录音生成</button>
+    </div>
+
+    <div class="tab-wrapper">
+        <div id="default-tab" class="tab-content active">
+            <div class="upload-section">
+                <div style="padding: 20px; font-size: 1.1rem; color:#555;" data-i18n="default_desc">
+                    使用系统默认配置，无需上传文件，直接生成demo演示视频
+                </div>
+                <button class="btn btn-primary" onclick="generateFromDefault()" data-i18n="btn_generate">开始生成</button>
+            </div>
+        </div>
+
+        <!-- 2. 上传文件生成 → 增加文件回显 -->
+        <div id="upload-tab" class="tab-content">
+            <div class="upload-section">
+                <div class="upload-area">
+                    <p data-i18n="upload_tip">点击此处或拖拽文件到此区域</p>
+                    <input type="file" id="upload-file" accept=".mp3,.wav,.m4a,.txt,.md,.doc,.docx,.xls,.xlsx">
+                    <label for="upload-file" data-i18n="upload_label">选择文件</label>
+                    <!-- 🔥 文件名回显区域 -->
+                    <div id="fileNameDisplay" class="file-name">已选择：test.mp3</div>
+                </div>
+                <button class="btn btn-primary" onclick="generateFromUpload()" data-i18n="btn_generate">开始生成</button>
+            </div>
+        </div>
+
+        <div id="record-tab" class="tab-content">
+            <div class="upload-section">
+                <div style="padding: 20px;">
+                    <h3 data-i18n="record_title">点击下方按钮开始录音</h3>
+                    <p style="margin-top:10px; color:#666;" data-i18n="record_tip">录音完成后将自动生成视频</p>
+                </div>
+                <button id="recordBtn" class="record-btn" onclick="toggleRecording()" data-i18n="btn_record">
+                    开始录音
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const i18n = {
+        zh: {
+            title: ["视频生成器", "Video Generator"],
+            subtitle: "选择您的音频来源，一键生成专业级双语视频 (中英)",
+            tab_default: "默认生成",
+            tab_upload: "上传文件生成",
+            tab_record: "录音生成",
+            default_desc: "使用系统默认配置，无需上传文件，直接生成demo演示视频",
+            btn_generate: "开始生成",
+            upload_tip: "点击此处或拖拽文件到此区域（支持音频/文本/文档）",
+            upload_label: "选择文件",
+            record_title: "点击下方按钮开始录音",
+            record_tip: "录音完成后将自动生成视频",
+            btn_record: "开始录音",
+            btn_recording: "正在录音...",
+            loading_text: "视频生成中，请稍候...",
+            alert_select_file: "请选择文件",
+            alert_generate_fail: "生成失败",
+            alert_upload_fail: "上传失败",
+            alert_record_fail: "录音生成失败",
+            page_title: "AI视频生成器"
+        },
+        en: {
+            title: ["Video Generator"],
+            subtitle: "Choose your audio source to generate professional bilingual videos (Chinese-English)",
+            tab_default: "Default Generate",
+            tab_upload: "Upload File",
+            tab_record: "Record Audio",
+            default_desc: "Use system default configuration, no file upload needed, generate demo video directly",
+            btn_generate: "Start Generate",
+            upload_tip: "Click or drag file here (audio/text/docs)",
+            upload_label: "Select File",
+            record_title: "Click the button below to start recording",
+            record_tip: "Video will be generated automatically after recording",
+            btn_record: "Start Recording",
+            btn_recording: "Recording...",
+            loading_text: "Generating video, please wait...",
+            alert_select_file: "Please select a file",
+            alert_generate_fail: "Generation failed",
+            alert_upload_fail: "Upload failed",
+            alert_record_fail: "Recording generation failed",
+            page_title: "AI Video Generator"
+        }
+    };
+
+    let currentLang = "zh";
+    let typingTimer = null;
+    let currentTimeout = null;
+    const dynamicText = document.getElementById("dynamicText");
+
+    function stopTypeWriter() {
+        if (typingTimer) clearInterval(typingTimer);
+        if (currentTimeout) clearTimeout(currentTimeout);
+        typingTimer = null;
+        currentTimeout = null;
+        dynamicText.textContent = "";
+    }
+
+    function switchLanguage(lang) {
+        if (currentLang === lang) return;
+        currentLang = lang;
+        const data = i18n[lang];
+
+        stopTypeWriter();
+
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            el.textContent = data[key];
+        });
+        document.querySelector('#loadingOverlay div:last-child').textContent = data.loading_text;
+        document.title = data.page_title;
+
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.lang === lang) btn.classList.add('active');
+        });
+
+        startTypeWriter(data.title);
+    }
+
+    const typingSpeed = 150;
+    const stayTime = 3000;
+    let textIndex = 0;
+
+    function startTypeWriter(texts) {
+        stopTypeWriter();
+        textIndex = 0;
+
+        function typeNext() {
+            const text = texts[textIndex];
+            let charIndex = 0;
+            dynamicText.textContent = "";
+
+            typingTimer = setInterval(() => {
+                if (charIndex < text.length) {
+                    dynamicText.textContent += text[charIndex];
+                    charIndex++;
+                } else {
+                    clearInterval(typingTimer);
+                    typingTimer = null;
+                    currentTimeout = setTimeout(() => {
+                        textIndex = (textIndex + 1) % texts.length;
+                        typeNext();
+                    }, stayTime);
+                }
+            }, typingSpeed);
+        }
+        typeNext();
+    }
+
+    window.onload = () => {
+        startTypeWriter(i18n.zh.title);
+        document.title = i18n.zh.page_title;
+
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', () => switchLanguage(btn.dataset.lang));
+        });
+
+        // ============== 🔥 上传文件后实时显示文件名 ==============
+        const fileInput = document.getElementById('upload-file');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+
+        fileInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                const name = e.target.files[0].name;
+                fileNameDisplay.textContent = "✅ 已选择：" + name;
+                fileNameDisplay.style.display = "block";
+            } else {
+                fileNameDisplay.style.display = "none";
+            }
+        });
+    };
+
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', () => {
+            const tab = button.dataset.tab;
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            button.classList.add('active');
+            document.getElementById(`${tab}-tab`).classList.add('active');
+        });
+    });
+
+    function showLoading() {
+        document.getElementById('loadingOverlay').style.display = 'flex';
+    }
+    function hideLoading() {
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+    async function generateFromDefault() {
+        showLoading();
+        try {
+            const res = await fetch('/generate/default', { method: 'POST' });
+            const data = await res.json();
+            alert(data.message || i18n[currentLang].alert_generate_fail);
+        } catch (e) {
+            console.error(e);
+            alert(i18n[currentLang].alert_generate_fail);
+        } finally {
+            hideLoading();
+        }
+    }
+
+    async function generateFromUpload() {
+        const file = document.getElementById('upload-file').files[0];
+        if (!file) return alert(i18n[currentLang].alert_select_file);
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        showLoading();
+        try {
+            const res = await fetch('/generate/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+            alert(data.message || i18n[currentLang].alert_upload_fail);
+        } catch (e) {
+            console.error(e);
+            alert(i18n[currentLang].alert_upload_fail);
+        } finally {
+            hideLoading();
+        }
+    }
+
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false;
+
+    async function toggleRecording() {
+        const btn = document.getElementById("recordBtn");
+        const data = i18n[currentLang];
+
+        if (!isRecording) {
+            isRecording = true;
+            btn.textContent = data.btn_recording;
+            btn.classList.add('recording');
+
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                await generateFromRecord(audioBlob);
+            };
+            mediaRecorder.start();
+        } else {
+            isRecording = false;
+            btn.textContent = data.btn_record;
+            btn.classList.remove('recording');
+            mediaRecorder.stop();
+        }
+    }
+
+    async function generateFromRecord(audioBlob) {
+        const formData = new FormData();
+        formData.append('file', audioBlob, 'recording.wav');
+
+        showLoading();
+        try {
+            const res = await fetch('/generate/record', { method: 'POST', body: formData });
+            const data = await res.json();
+            alert(data.message || i18n[currentLang].alert_record_fail);
+        } catch (e) {
+            console.error(e);
+            alert(i18n[currentLang].alert_record_fail);
+        } finally {
+            hideLoading();
+        }
+    }
+</script>
+</body>
+</html>
